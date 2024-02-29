@@ -8,4 +8,4 @@
 3. Select the location to save the CSV file.
 4. Click 'Start' to begin moving files or 'Check' to export information without moving.
 
-To access the app, you will have to navigate to the folder where the script is stored using PowerShell (Admin is not required) and run the script using **"./"**
+To access the app, you will have to navigate to the folder where the script is stored using PowerShell (Admin is not required) and run the script using **" ./ "**
