@@ -3,31 +3,17 @@ function Start-MoveFiles {
     # Get user-selected folder
     $parentFolder = $folderTextBox.Text
 
-    # Get user-selected time interval for moving files
-    $timeInterval = $timePicker.SelectedItem
+    # Get user-selected start and end date/time for moving files
+    $moveStartDate = $startDatePicker.Value.Date
+    $moveStartTime = $startTimePicker.Value.TimeOfDay
+    $moveStartTimestamp = $moveStartDate.Add($moveStartTime)
 
-    if ($timeInterval -eq "Custom") {
-        # Get user-selected date and time for moving files
-        $moveDate = $datePicker.Value.Date
-        $moveTime = $timePickerCustom.Value.TimeOfDay
-        $moveTimestamp = $moveDate.Add($moveTime)
-    } else {
-        # Convert the selected time interval to minutes
-        $minutes = @{
-            "5 Minutes"  = 5
-            "10 Minutes" = 10
-            "15 Minutes" = 15
-            "20 Minutes" = 20
-            "30 Minutes" = 30
-            "1 Hour" = 60
-            "2 Hours" = 120
-        }[$timeInterval]
-
-        # Calculate the timestamp based on the selected time interval
-        $moveTimestamp = (Get-Date).AddMinutes(-$minutes)
-    }
+    $moveEndDate = $endDatePicker.Value.Date
+    $moveEndTime = $endTimePicker.Value.TimeOfDay
+    $moveEndTimestamp = $moveEndDate.Add($moveEndTime)
 
     # Set default CSV file name
+    $timestamp = Get-Date -Format "yyyy.MM.dd_HH.mm.ss"
     $csvFilePath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), "PA_MOVE_$timestamp.csv")
 
     # Initialize an array to store the results
@@ -41,8 +27,8 @@ function Start-MoveFiles {
         $files = Get-ChildItem -Path $errorFolder.FullName -File
 
         foreach ($file in $files) {
-            # Check if the file is newer than the user-selected timestamp
-            if ($file.LastWriteTime -gt $moveTimestamp) {
+            # Check if the file is within the user-selected timestamp range
+            if ($file.LastWriteTime -gt $moveStartTimestamp -and $file.LastWriteTime -lt $moveEndTimestamp) {
                 # Move the file to the parent folder
                 Move-Item -Path $file.FullName -Destination $errorFolder.Parent.FullName
 
@@ -68,11 +54,11 @@ function Start-MoveFiles {
 function Show-Help {
     [System.Windows.Forms.MessageBox]::Show(
         "This app allows you to perform the following operations:`n`n" +
-        "1. Move files newer than the specified timestamp from 'error' folders to their parent folder.`n" +
+        "1. Move files within the specified timestamp range from 'error' folders to their parent folder.`n" +
         "2. Check files in '_fehler' folders and export information to a CSV without moving them.`n`n" +
         "To get started, follow these steps:`n`n" +
         "1. Select the folder containing 'error' folders.`n" +
-        "2. Choose the desired timestamp or select 'Custom' to specify your own date and time.`n" +
+        "2. Choose the desired start and end date/time for the interval.`n" +
         "3. Select the location to save the CSV file.`n" +
         "4. Click 'Start' to begin moving files or 'Check' to export information without moving.`n`n" +
         "For additional assistance, contact Jeleru Darius, (Darius.Jeleru@partner.bmw.de) (qxz3m5t).",
@@ -114,26 +100,25 @@ function Check-Files {
 # Create the main form
 $mainForm = New-Object System.Windows.Forms.Form
 $mainForm.Text = "(Beta v0.2)Move _Fehler Dateien"
-$mainForm.Size = New-Object System.Drawing.Size(460, 260)
+$mainForm.Size = New-Object System.Drawing.Size(460, 320)
 $mainForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
-#$mainForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
 $mainForm.MaximizeBox = $false
 $mainForm.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
 
 # Create a label and textbox for selecting the folder
 $folderLabel = New-Object System.Windows.Forms.Label
 $folderLabel.Text = "Select Folder:"
-$folderLabel.Location = New-Object System.Drawing.Point(10, 40)
+$folderLabel.Location = New-Object System.Drawing.Point(10, 20)
 $mainForm.Controls.Add($folderLabel)
 
 $folderTextBox = New-Object System.Windows.Forms.TextBox
-$folderTextBox.Location = New-Object System.Drawing.Point(120, 40)
+$folderTextBox.Location = New-Object System.Drawing.Point(120, 20)
 $folderTextBox.Size = New-Object System.Drawing.Size(200, 50)
 $mainForm.Controls.Add($folderTextBox)
 
 $folderBrowseButton = New-Object System.Windows.Forms.Button
 $folderBrowseButton.Text = "Browse..."
-$folderBrowseButton.Location = New-Object System.Drawing.Point(330, 40)
+$folderBrowseButton.Location = New-Object System.Drawing.Point(330, 20)
 $folderBrowseButton.Add_Click({
     $folderBrowserDialog = New-Object System.Windows.Forms.FolderBrowserDialog
     $result = $folderBrowserDialog.ShowDialog()
@@ -143,64 +128,54 @@ $folderBrowseButton.Add_Click({
 })
 $mainForm.Controls.Add($folderBrowseButton)
 
-# Create a dropdown list for selecting the time interval
-$timeLabel = New-Object System.Windows.Forms.Label
-$timeLabel.Text = "Select Time Interval:"
-$timeLabel.Location = New-Object System.Drawing.Point(10, 70)
-$mainForm.Controls.Add($timeLabel)
+# Create date and time pickers for selecting the start date/time
+$startDateLabel = New-Object System.Windows.Forms.Label
+$startDateLabel.Text = "Select Start Date:"
+$startDateLabel.Location = New-Object System.Drawing.Point(10, 60)
+$mainForm.Controls.Add($startDateLabel)
 
-$timePicker = New-Object System.Windows.Forms.ComboBox
-$timePicker.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-$timePicker.Items.Add("5 Minutes")
-$timePicker.Items.Add("10 Minutes")
-$timePicker.Items.Add("15 Minutes")
-$timePicker.Items.Add("20 Minutes")
-$timePicker.Items.Add("30 Minutes")
-$timePicker.Items.Add("1 Hour")
-$timePicker.Items.Add("2 Hours")
-$timePicker.Items.Add("Custom")
-$timePicker.Location = New-Object System.Drawing.Point(150, 70)
-$timePicker.Add_SelectedIndexChanged({
-    if ($timePicker.SelectedItem -eq "Custom") {
-        $datePicker.Enabled = $true
-        $timePickerCustom.Enabled = $true
-    } else {
-        $datePicker.Enabled = $false
-        $timePickerCustom.Enabled = $false
-    }
-})
-$mainForm.Controls.Add($timePicker)
+$startDatePicker = New-Object System.Windows.Forms.DateTimePicker
+$startDatePicker.Location = New-Object System.Drawing.Point(120, 60)
+$startDatePicker.Format = [System.Windows.Forms.DateTimePickerFormat]::Short
+$mainForm.Controls.Add($startDatePicker)
 
-# Create a date picker for selecting the date (initially disabled)
-$dateLabel = New-Object System.Windows.Forms.Label
-$dateLabel.Text = "Select Date:"
-$dateLabel.Location = New-Object System.Drawing.Point(10, 100)
-$mainForm.Controls.Add($dateLabel)
+$startTimeLabel = New-Object System.Windows.Forms.Label
+$startTimeLabel.Text = "Select Start Time:"
+$startTimeLabel.Location = New-Object System.Drawing.Point(10, 100)
+$mainForm.Controls.Add($startTimeLabel)
 
-$datePicker = New-Object System.Windows.Forms.DateTimePicker
-$datePicker.Location = New-Object System.Drawing.Point(150, 100)
-$datePicker.Format = [System.Windows.Forms.DateTimePickerFormat]::Short
-$datePicker.Enabled = $false
-$mainForm.Controls.Add($datePicker)
+$startTimePicker = New-Object System.Windows.Forms.DateTimePicker
+$startTimePicker.Location = New-Object System.Drawing.Point(120, 100)
+$startTimePicker.Format = [System.Windows.Forms.DateTimePickerFormat]::Time
+$startTimePicker.ShowUpDown = $true
+$mainForm.Controls.Add($startTimePicker)
 
-# Create a label for the time picker
-$timePickerLabel = New-Object System.Windows.Forms.Label
-$timePickerLabel.Text = "Select Time:"
-$timePickerLabel.Location = New-Object System.Drawing.Point(10, 130)
-$mainForm.Controls.Add($timePickerLabel)
+# Create date and time pickers for selecting the end date/time
+$endDateLabel = New-Object System.Windows.Forms.Label
+$endDateLabel.Text = "Select End Date:"
+$endDateLabel.Location = New-Object System.Drawing.Point(10, 140)
+$mainForm.Controls.Add($endDateLabel)
 
-# Create a time picker for selecting the time (initially disabled)
-$timePickerCustom = New-Object System.Windows.Forms.DateTimePicker
-$timePickerCustom.Location = New-Object System.Drawing.Point(150, 130)
-$timePickerCustom.Format = [System.Windows.Forms.DateTimePickerFormat]::Time
-$timePickerCustom.ShowUpDown = $true
-$timePickerCustom.Enabled = $false
-$mainForm.Controls.Add($timePickerCustom)
+$endDatePicker = New-Object System.Windows.Forms.DateTimePicker
+$endDatePicker.Location = New-Object System.Drawing.Point(120, 140)
+$endDatePicker.Format = [System.Windows.Forms.DateTimePickerFormat]::Short
+$mainForm.Controls.Add($endDatePicker)
+
+$endTimeLabel = New-Object System.Windows.Forms.Label
+$endTimeLabel.Text = "Select End Time:"
+$endTimeLabel.Location = New-Object System.Drawing.Point(10, 180)
+$mainForm.Controls.Add($endTimeLabel)
+
+$endTimePicker = New-Object System.Windows.Forms.DateTimePicker
+$endTimePicker.Location = New-Object System.Drawing.Point(120, 180)
+$endTimePicker.Format = [System.Windows.Forms.DateTimePickerFormat]::Time
+$endTimePicker.ShowUpDown = $true
+$mainForm.Controls.Add($endTimePicker)
 
 # Create a label and textbox for entering the CSV file path
 $csvPathLabel = New-Object System.Windows.Forms.Label
 $csvPathLabel.Text = "CSV File Path:"
-$csvPathLabel.Location = New-Object System.Drawing.Point(10, 160)
+$csvPathLabel.Location = New-Object System.Drawing.Point(10, 220)
 $mainForm.Controls.Add($csvPathLabel)
 
 # Add this line to get the timestamp
@@ -210,7 +185,7 @@ $timestamp = Get-Date -Format "yyyy.MM.dd_HH.mm.ss"
 $csvFilePath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), "PA_MOVE_$timestamp.csv")
 
 $csvPathTextBox = New-Object System.Windows.Forms.TextBox
-$csvPathTextBox.Location = New-Object System.Drawing.Point(150, 160)
+$csvPathTextBox.Location = New-Object System.Drawing.Point(120, 220)
 $csvPathTextBox.Size = New-Object System.Drawing.Size(200, 50)
 # Set the text of the textbox to the generated path
 $csvPathTextBox.Text = $csvFilePath
@@ -218,7 +193,7 @@ $mainForm.Controls.Add($csvPathTextBox)
 
 $csvPathBrowseButton = New-Object System.Windows.Forms.Button
 $csvPathBrowseButton.Text = "Browse..."
-$csvPathBrowseButton.Location = New-Object System.Drawing.Point(360, 160)
+$csvPathBrowseButton.Location = New-Object System.Drawing.Point(330, 220)
 $csvPathBrowseButton.Add_Click({
     $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
     $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
@@ -233,7 +208,7 @@ $mainForm.Controls.Add($csvPathBrowseButton)
 # Create the Start, Cancel, and Close buttons
 $startButton = New-Object System.Windows.Forms.Button
 $startButton.Text = "Start"
-$startButton.Location = New-Object System.Drawing.Point(10, 190)
+$startButton.Location = New-Object System.Drawing.Point(10, 260)
 $startButton.Add_Click({ Start-MoveFiles })
 $mainForm.Controls.Add($startButton)
 
@@ -247,14 +222,14 @@ $mainForm.Controls.Add($helpButton)
 # Create the Close button
 $closeButton = New-Object System.Windows.Forms.Button
 $closeButton.Text = "Close"
-$closeButton.Location = New-Object System.Drawing.Point(190, 190)
+$closeButton.Location = New-Object System.Drawing.Point(190, 260)
 $closeButton.Add_Click({ $mainForm.Close() })
 $mainForm.Controls.Add($closeButton)
 
 # Create the Check button
 $checkButton = New-Object System.Windows.Forms.Button
 $checkButton.Text = "Check"
-$checkButton.Location = New-Object System.Drawing.Point(100, 190)
+$checkButton.Location = New-Object System.Drawing.Point(100, 260)
 $checkButton.Add_Click({ Check-Files })
 $mainForm.Controls.Add($checkButton)
 
