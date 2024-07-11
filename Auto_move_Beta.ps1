@@ -1,4 +1,4 @@
-﻿# Define the function to handle the button click event
+# Define the function to handle the button click event
 function Start-MoveFiles {
     # Get user-selected folder
     $parentFolder = $folderTextBox.Text
@@ -19,14 +19,14 @@ function Start-MoveFiles {
             "15 Minutes" = 15
             "20 Minutes" = 20
             "30 Minutes" = 30
+            "1 Hour" = 60
+            "2 Hours" = 120
         }[$timeInterval]
 
         # Calculate the timestamp based on the selected time interval
         $moveTimestamp = (Get-Date).AddMinutes(-$minutes)
     }
-    # Define the function to handle the button click event for 'Check'
 
-    # Get user-selected CSV file path
     # Set default CSV file name
     $csvFilePath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), "PA_MOVE_$timestamp.csv")
 
@@ -59,14 +59,12 @@ function Start-MoveFiles {
 
     # Export the results to a CSV file
     $results | Export-Csv -Path $csvFilePath -NoTypeInformation
-    
 
     # Show a message box indicating the operation is complete
     [System.Windows.Forms.MessageBox]::Show("Files moved and results exported to $csvFilePath", "Operation Complete", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 }
 
 # Define the function to handle the button click event for 'Help'
-
 function Show-Help {
     [System.Windows.Forms.MessageBox]::Show(
         "This app allows you to perform the following operations:`n`n" +
@@ -93,7 +91,7 @@ function Check-Files {
     # Initialize an array to store the results
     $results = @()
     # Get all the 'error' folders within the parent folder and its subfolders
-    $errorFolders = Get-ChildItem -Path $parentFolder -Filter "error" -Recurse -Directory
+    $errorFolders = Get-ChildItem -Path $parentFolder -Filter "_fehler" -Recurse -Directory
 
     foreach ($errorFolder in $errorFolders) {
         # Get a list of files in the error folder
@@ -158,6 +156,8 @@ $timePicker.Items.Add("10 Minutes")
 $timePicker.Items.Add("15 Minutes")
 $timePicker.Items.Add("20 Minutes")
 $timePicker.Items.Add("30 Minutes")
+$timePicker.Items.Add("1 Hour")
+$timePicker.Items.Add("2 Hours")
 $timePicker.Items.Add("Custom")
 $timePicker.Location = New-Object System.Drawing.Point(150, 70)
 $timePicker.Add_SelectedIndexChanged({
@@ -183,11 +183,10 @@ $datePicker.Format = [System.Windows.Forms.DateTimePickerFormat]::Short
 $datePicker.Enabled = $false
 $mainForm.Controls.Add($datePicker)
 
-
 # Create a label for the time picker
 $timePickerLabel = New-Object System.Windows.Forms.Label
-$timePickerLabel.Text = "Select Time Interval:"
-$timePickerLabel.Location = New-Object System.Drawing.Point(10, 100)
+$timePickerLabel.Text = "Select Time:"
+$timePickerLabel.Location = New-Object System.Drawing.Point(10, 130)
 $mainForm.Controls.Add($timePickerLabel)
 
 # Create a time picker for selecting the time (initially disabled)
@@ -203,10 +202,13 @@ $csvPathLabel = New-Object System.Windows.Forms.Label
 $csvPathLabel.Text = "CSV File Path:"
 $csvPathLabel.Location = New-Object System.Drawing.Point(10, 160)
 $mainForm.Controls.Add($csvPathLabel)
+
 # Add this line to get the timestamp
-$timestamp = Get-Date -Format "yyyy.MM.dd_HH.mm.ss" 
+$timestamp = Get-Date -Format "yyyy.MM.dd_HH.mm.ss"
+
 # Add this line to set the default CSV file path
-$csvFilePath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), "PA_MOVE_$timestamp.csv") 
+$csvFilePath = [System.IO.Path]::Combine([System.Environment]::GetFolderPath('Desktop'), "PA_MOVE_$timestamp.csv")
+
 $csvPathTextBox = New-Object System.Windows.Forms.TextBox
 $csvPathTextBox.Location = New-Object System.Drawing.Point(150, 160)
 $csvPathTextBox.Size = New-Object System.Drawing.Size(200, 50)
@@ -214,12 +216,11 @@ $csvPathTextBox.Size = New-Object System.Drawing.Size(200, 50)
 $csvPathTextBox.Text = $csvFilePath
 $mainForm.Controls.Add($csvPathTextBox)
 
-
-
 $csvPathBrowseButton = New-Object System.Windows.Forms.Button
 $csvPathBrowseButton.Text = "Browse..."
 $csvPathBrowseButton.Location = New-Object System.Drawing.Point(360, 160)
-$csvPathBrowseButton.Add_Click({    $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
+$csvPathBrowseButton.Add_Click({
+    $saveFileDialog = New-Object System.Windows.Forms.SaveFileDialog
     $saveFileDialog.Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
     $saveFileDialog.FileName = "PA_Move.csv"
     $result = $saveFileDialog.ShowDialog()
@@ -229,20 +230,12 @@ $csvPathBrowseButton.Add_Click({    $saveFileDialog = New-Object System.Windows.
 })
 $mainForm.Controls.Add($csvPathBrowseButton)
 
-
-
 # Create the Start, Cancel, and Close buttons
 $startButton = New-Object System.Windows.Forms.Button
 $startButton.Text = "Start"
 $startButton.Location = New-Object System.Drawing.Point(10, 190)
 $startButton.Add_Click({ Start-MoveFiles })
 $mainForm.Controls.Add($startButton)
-
-<#$cancelButton = New-Object System.Windows.Forms.Button
-$cancelButton.Text = "Cancel"
-$cancelButton.Location = New-Object System.Drawing.Point(100, 160)
-$cancelButton.Add_Click({ $mainForm.Close() })
-$mainForm.Controls.Add($cancelButton)#>
 
 # Create the Help button
 $helpButton = New-Object System.Windows.Forms.Button
@@ -267,5 +260,3 @@ $mainForm.Controls.Add($checkButton)
 
 # Show the form
 $mainForm.ShowDialog() | Out-Null
-
-
