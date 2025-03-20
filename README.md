@@ -1,4 +1,4 @@
-# EMIL_AutoMove_PS
+# AutoMove_PS
 **This app allows you to perform the following operations:**
 1. Move files newer than the specified timestamp from 'error' folders to their parent folder.
 2. Check files in '_fehler' folders and export information to a CSV without moving them.
